@@ -1,0 +1,17 @@
+diff --git a/android/src/main/java/com/dexterous/flutterlocalnotifications/FlutterLocalNotificationsPlugin.java b/android/src/main/java/com/dexterous/flutterlocalnotifications/FlutterLocalNotificationsPlugin.java
+index 1f1e68f..0d5c33e 100644
+--- a/android/src/main/java/com/dexterous/flutterlocalnotifications/FlutterLocalNotificationsPlugin.java
++++ b/android/src/main/java/com/dexterous/flutterlocalnotifications/FlutterLocalNotificationsPlugin.java
+@@ -1016,7 +1016,11 @@
+       }
+ 
+       if (largeIcon != null) {
+-        bigPictureStyle.bigLargeIcon(null);
++        // Fixed for Android 15 compatibility - avoiding ambiguous method call
++        // Replace bigLargeIcon(null) with a version that specifies the Bitmap type
++        Bitmap nullBitmap = null;
++        bigPictureStyle.bigLargeIcon(nullBitmap);
++        
+       }
+       
+       mBuilder.setStyle(bigPictureStyle); 

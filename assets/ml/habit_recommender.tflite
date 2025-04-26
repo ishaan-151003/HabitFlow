@@ -1,0 +1,3 @@
+// This is a placeholder file for the habit recommender TensorFlow Lite model.
+// In production, this would be replaced with an actual trained ML model.
+// Model purpose: Recommend new habits based on user preferences, current habits, and success patterns. 

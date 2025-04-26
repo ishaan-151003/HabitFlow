@@ -1,0 +1,10 @@
+HabitFlow Logo Placeholder
+
+This file serves as a placeholder for the logo image that will be used in the HabitFlow app.
+In a production environment, this would be replaced with actual image files (PNG, SVG, etc.).
+
+Future logo assets:
+- logo.png - Main app logo
+- logo_dark.png - Logo variant for dark mode
+- app_icon.png - App icon for launcher
+- splash_logo.png - Logo for splash screen 

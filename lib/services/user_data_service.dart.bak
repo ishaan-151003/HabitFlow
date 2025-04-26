@@ -1,0 +1,197 @@
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/habit.dart';
+import '../models/user_profile.dart';
+import 'database_service.dart';
+import 'auth_service.dart';
+
+class UserDataService with ChangeNotifier {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final DatabaseService _localDatabase = DatabaseService();
+  final AuthService _authService;
+  bool _isSyncing = false;
+  String? _syncError;
+
+  bool get isSyncing => _isSyncing;
+  String? get syncError => _syncError;
+
+  UserDataService(this._authService) {
+    // Listen to auth changes to sync data when user logs in/out
+    _authService.addListener(_handleAuthChange);
+  }
+
+  @override
+  void dispose() {
+    _authService.removeListener(_handleAuthChange);
+    super.dispose();
+  }
+
+  void _handleAuthChange() async {
+    if (_authService.isLoggedIn) {
+      // User just logged in, sync data from cloud
+      await syncDataFromCloud();
+    }
+  }
+
+  // Sync all user habits from Firestore to local database
+  Future<bool> syncDataFromCloud() async {
+    if (!_authService.isLoggedIn) return false;
+    
+    _isSyncing = true;
+    _syncError = null;
+    notifyListeners();
+    
+    try {
+      final userId = _authService.currentUser!.uid;
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('habits')
+          .get();
+      
+      // Get all local habits
+      final localHabits = await _localDatabase.getHabits();
+      final localHabitsMap = {for (var h in localHabits) h.id: h};
+      
+      // Process cloud habits
+      for (var doc in snapshot.docs) {
+        final cloudHabit = Habit.fromMap(doc.data());
+        
+        if (localHabitsMap.containsKey(cloudHabit.id)) {
+          // Compare timestamps and use the most recent version
+          final localHabit = localHabitsMap[cloudHabit.id]!;
+          // Implement a logic to merge changes if needed
+          // For this example, we're just using the cloud version
+          await _localDatabase.updateHabit(cloudHabit);
+        } else {
+          // Add new habit from cloud
+          await _localDatabase.insertHabit(cloudHabit);
+        }
+      }
+      
+      _isSyncing = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error syncing data from cloud: $e');
+      _syncError = 'Failed to sync data from cloud';
+      _isSyncing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Save a habit to both local database and cloud
+  Future<bool> saveHabit(Habit habit) async {
+    try {
+      // First save to local database
+      final id = await _localDatabase.insertHabit(habit);
+      
+      // If user is logged in, also save to cloud
+      if (_authService.isLoggedIn) {
+        final userId = _authService.currentUser!.uid;
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('habits')
+            .doc(habit.id.toString())
+            .set(habit.toMap());
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error saving habit: $e');
+      _syncError = 'Failed to save habit';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Update a habit in both local database and cloud
+  Future<bool> updateHabit(Habit habit) async {
+    try {
+      // First update local database
+      await _localDatabase.updateHabit(habit);
+      
+      // If user is logged in, also update in cloud
+      if (_authService.isLoggedIn) {
+        final userId = _authService.currentUser!.uid;
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('habits')
+            .doc(habit.id.toString())
+            .update(habit.toMap());
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error updating habit: $e');
+      _syncError = 'Failed to update habit';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Delete a habit from both local database and cloud
+  Future<bool> deleteHabit(int id) async {
+    try {
+      // First delete from local database
+      await _localDatabase.deleteHabit(id);
+      
+      // If user is logged in, also delete from cloud
+      if (_authService.isLoggedIn) {
+        final userId = _authService.currentUser!.uid;
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('habits')
+            .doc(id.toString())
+            .delete();
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting habit: $e');
+      _syncError = 'Failed to delete habit';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Push all local data to cloud (useful when user logs in)
+  Future<bool> pushAllDataToCloud() async {
+    if (!_authService.isLoggedIn) return false;
+    
+    _isSyncing = true;
+    _syncError = null;
+    notifyListeners();
+    
+    try {
+      final userId = _authService.currentUser!.uid;
+      final localHabits = await _localDatabase.getHabits();
+      
+      // Create a batch to perform multiple operations
+      final batch = _firestore.batch();
+      final habitsRef = _firestore.collection('users').doc(userId).collection('habits');
+      
+      for (var habit in localHabits) {
+        final docRef = habitsRef.doc(habit.id.toString());
+        batch.set(docRef, habit.toMap());
+      }
+      
+      // Commit the batch
+      await batch.commit();
+      
+      _isSyncing = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error pushing data to cloud: $e');
+      _syncError = 'Failed to sync data to cloud';
+      _isSyncing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+} 

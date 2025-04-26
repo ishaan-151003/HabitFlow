@@ -1,0 +1,3 @@
+// This is a placeholder file for the habit prediction TensorFlow Lite model.
+// In production, this would be replaced with an actual trained ML model.
+// Model purpose: Predict the likelihood of habit completion based on user behavior patterns. 

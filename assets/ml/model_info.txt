@@ -1,0 +1,21 @@
+# HabitFlow ML Models
+
+This directory will contain TensorFlow Lite models for habit prediction and analysis.
+
+For the MVP version, we're using rule-based predictions instead of full ML models to reduce complexity.
+
+Future ML models will include:
+1. Habit drop-off prediction
+2. User clustering for personalized recommendations
+3. Optimal habit timing prediction
+4. Habit correlation analysis 
+
+HabitFlow ML Models Placeholder
+
+This file serves as a placeholder for the ML models that will be used in the HabitFlow app.
+In a production environment, this would be replaced with actual TFLite model files.
+
+Future ML model assets:
+- habit_prediction.tflite - Model for predicting habit completion likelihood
+- streaks_analysis.tflite - Model for analyzing streak patterns
+- recommendation_engine.tflite - Model for suggesting habit improvements 
